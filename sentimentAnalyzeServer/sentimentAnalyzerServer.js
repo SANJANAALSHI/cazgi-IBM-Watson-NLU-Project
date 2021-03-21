@@ -1,52 +1,151 @@
 const express = require('express');
-const app = new express();
 const dotenv = require('dotenv');
 dotenv.config();
+
+function getNLUInstance(){
+    let api_key=process.env.API_KEY;
+    let api_url=process.env.API_URL;
+    
+    const NaturalLanguageUnderstandingV1 = require('ibm-watson/natural-language-understanding/v1');
+    const {IamAuthenticator} = require('ibm-watson/auth');
+
+    const naturalLanguageUnderstanding = new NaturalLanguageUnderstandingV1({
+        version:'2021-03-19',
+        authenticator: new IamAuthenticator({
+            apikey:api_key,
+        }),
+        serviceUrl: api_url
+    });
+    return naturalLanguageUnderstanding;
+}
+
+const app = new express();
 
 app.use(express.static('client'))
 
 const cors_app = require('cors');
 app.use(cors_app());
 
-function getNLUInstance(){
-    let api_key = process.env.API_KEY;
-    let api_url = process.env.API_URL;
-
-    const NaturalLanguageUnderstandingV1 = require('ibm-whatson/natural-language-understanding/v1');
-    const {IamAuthenticator} = require('ibm-watson/auth');
-
-    const naturalLanguageUnderstanding = new NaturalLanguageUnderstandingV1({
-  version: '2020-08-01',
-  authenticator: new IamAuthenticator({
-    apikey: '{apikey}',
-  }),
-  serviceUrl: '{url}',
-});
-return naturalLanguageUnderstanding;
-
-}
 app.get("/",(req,res)=>{
     res.render('index.html');
   });
 
+/*  app.get("/url/emotion", (req,res) => {
+    return res.send({"happy":"90","sad":"10"});
+});
+app.get("/url/sentiment", (req,res) => {
+    return res.send("url sentiment for "+req.query.url);
+});
+app.get("/text/emotion", (req,res) => {
+    return res.send({"happy":"10","sad":"90"});
+});
+app.get("/text/sentiment", (req,res) => {
+    return res.send("text sentiment for "+req.query.text);
+});*/
+
 app.get("/url/emotion", (req,res) => {
 
-    getNLUInstance({"happy":"90","sad":"10"});
+    let naturalLanguageUnderstanding = getNLUInstance();
+    console.log(req.query.url);
+    const analyzeParams = {
+        'url': req.query.url,
+        'features': {
+            'keywords': {
+                'sentiment': false,
+                'emotion': true,
+                'limit':10
+              }
+        }
+      };
+      
+      naturalLanguageUnderstanding.analyze(analyzeParams)
+        .then(analysisResults => {
+            let result = JSON.stringify(analysisResults, null, 2);
+            console.log(result);
+            res.send(result);
+        })
+        .catch(err => {
+          console.log('error:', err);
+        });
 });
 
 app.get("/url/sentiment", (req,res) => {
-    getNLUInstance("url sentiment for "+req.query.url);
+    let naturalLanguageUnderstanding = getNLUInstance();
+    console.log(req.query.url);
+    const analyzeParams = {
+        'url': req.query.url,
+        'features': {
+            'keywords': {
+                'sentiment': true,
+                'emotion': false,
+                'limit':10
+              }
+        }
+      };
+      
+      naturalLanguageUnderstanding.analyze(analyzeParams)
+        .then(analysisResults => {
+            let result = JSON.stringify(analysisResults, null, 2);
+            console.log(analysisResults.result.keywords[0].sentiment.label);
+            res.send(JSON.stringify(analysisResults.result.keywords[0].sentiment.label, null, 2));
+        })
+        .catch(err => {
+          console.log('error:', err);
+        });
 });
 
 app.get("/text/emotion", (req,res) => {
-    getNLUInstance({"happy":"10","sad":"90"});
+
+    let naturalLanguageUnderstanding = getNLUInstance();
+    console.log(req.query.text);
+    const analyzeParams = {
+        'text': req.query.text,
+        'features': {
+            'keywords': {
+                'sentiment': false,
+                'emotion': true,
+                'limit':10
+              }
+        }
+      };
+      
+      naturalLanguageUnderstanding.analyze(analyzeParams)
+        .then(analysisResults => {
+            let result = JSON.stringify(analysisResults, null, 2);
+            console.log(result);
+            res.send(result);
+        })
+        .catch(err => {
+          console.log('error:', err);
+        });
 });
 
 app.get("/text/sentiment", (req,res) => {
-    getNLUInstance("text sentiment for "+req.query.text);
+    let naturalLanguageUnderstanding = getNLUInstance();
+    console.log(req.query.text);
+    const analyzeParams = {
+        'text': req.query.text,
+        'features': {
+            'keywords': {
+                'sentiment': true,
+                'emotion': false,
+                'limit':10
+              }
+        }
+      };
+      
+      naturalLanguageUnderstanding.analyze(analyzeParams)
+        .then(analysisResults => {
+            let result = JSON.stringify(analysisResults, null, 2);
+            console.log(analysisResults.result.keywords[0].sentiment.label);
+            res.send(JSON.stringify(analysisResults.result.keywords[0].sentiment.label, null, 2));
+        })
+        .catch(err => {
+          console.log('error:', err);
+        });
+    //return res.send("text sentiment for "+req.query.text);
 });
 
-let server = app.listen(8080, () => {
+let server = app.listen(3000, () => {
     console.log('Listening', server.address().port)
 })
-
